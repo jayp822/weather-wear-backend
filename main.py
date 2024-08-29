@@ -1,7 +1,6 @@
 # main.py
 # Run the server with: uvicorn main:app --reload
 
-from urllib.parse import unquote
 from fastapi import FastAPI, HTTPException
 from smtp_server import send_email, get_clothing_recommendations
 from location_data import LocationData
@@ -89,7 +88,7 @@ async def send_weather_email(city: str, state: str, email: str):
 
 
 @app.post("/send_weather_average/{city}/{state}")
-async def send_weather_email(city: str, state: str):
+async def get_daily(city: str, state: str):
     location = LocationData(f"{city}, {state}")
     coordinates = location.get_coordinates(city, state)
 

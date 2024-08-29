@@ -43,14 +43,14 @@ def get_clothing_recommendations(hourly_weather_data):
     wind_speed_warning = False
     rain_warning = False
 
-    for hour in hourly_weather_data["hourly"]:
+    for hour in hourly_weather_data["hourly"][:24]:
         total_temp += hour["temp"]
         if hour["wind_speed"] > 20:  # Adjust the threshold for windiness as needed
             wind_speed_warning = True
         if "rain" in hour["weather"][0]["description"].lower():
             rain_warning = True
 
-    average_temp = round(total_temp / len(hourly_weather_data["hourly"]), 2)
+    average_temp = round(total_temp / 24, 2)
 
     # Base recommendation on average temperature
     if average_temp < 50:
