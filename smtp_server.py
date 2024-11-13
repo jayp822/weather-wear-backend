@@ -2,13 +2,13 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
-
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_SERVER = os.getenv("SMTP_SERVER")
+SMTP_PORT = os.getenv("SMTP_PORT")
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
@@ -38,34 +38,52 @@ def send_email(recipient_email, subject, body):
         print(f"Failed to send email: {e}")
 
 
-def get_clothing_recommendations(hourly_weather_data):
-    total_temp = 0
-    wind_speed_warning = False
-    rain_warning = False
+def get_clothing_recommendations(weather_json):
 
-    for hour in hourly_weather_data["hourly"][:24]:
-        total_temp += hour["temp"]
-        if hour["wind_speed"] > 20:  # Adjust the threshold for windiness as needed
-            wind_speed_warning = True
-        if "rain" in hour["weather"][0]["description"].lower():
-            rain_warning = True
+    # Access the first forecast item in the list for current weather conditions
+    current_weather = weather_json["list"][0]
+    temperature = current_weather["main"]["temp"]
+    feels_like = current_weather["main"]["feels_like"]
+    weather_description = current_weather["weather"][0]["description"]
+    wind_speed = current_weather["wind"]["speed"]
 
-    average_temp = round(total_temp / 24, 2)
+    # Print data for debugging
+    print(
+        f"Temperature: {temperature}, Feels like: {feels_like}, Description: {weather_description}, Wind speed: {wind_speed}"
+    )
 
-    # Base recommendation on average temperature
-    if average_temp < 50:
-        recommendation = f"It's cold outside today! Wear a coat, gloves, and a warm hat. Average Temperature {average_temp} degrees fahrenheit."
-    elif 50 <= average_temp < 68:
-        recommendation = f"It's a bit chilly today. A light jacket should be fine. Average Temperature {average_temp} degrees fahrenheit."
-    elif 68 <= average_temp < 86:
-        recommendation = f"The weather is warm today. T-shirt and jeans would be comfortable. Average Temperature {average_temp} degrees fahrenheit."
+    # Clothing recommendation logic based on temperature and description
+    if "clear" in weather_description.lower():
+        if temperature > 30:
+            recommendation = "It's hot outside. Wear lightweight clothing, sunglasses, and sunscreen."
+        elif 20 <= temperature <= 30:
+            recommendation = (
+                "The weather is warm. A light shirt and shorts would be perfect."
+            )
+        elif 10 <= temperature < 20:
+            recommendation = (
+                "It's a bit cool. Consider wearing a light jacket or sweater."
+            )
+        else:
+            recommendation = "It's cold. Make sure to bundle up with a warm jacket."
+    elif "clouds" in weather_description.lower():
+        if temperature > 25:
+            recommendation = "It might be cloudy but still warm. A light jacket or t-shirt should be fine."
+        elif 15 <= temperature <= 25:
+            recommendation = "Cloudy weather, so wear a jacket or sweater for comfort."
+        else:
+            recommendation = "Cool and cloudy, wear a warm jacket or coat."
+    elif "snow" in weather_description.lower():
+        recommendation = "Snowing! Dress warmly with a heavy coat, gloves, and scarf."
+    elif "rain" in weather_description.lower():
+        recommendation = "It's rainy. A waterproof jacket and umbrella are recommended."
     else:
-        recommendation = f"It's hot today! Wear shorts and a t-shirt, and don't forget sunscreen. Average Temperature {average_temp} degrees fahrenheit."
+        recommendation = (
+            "The weather seems unpredictable. Layer up to stay comfortable."
+        )
 
-    # Additional recommendations based on weather conditions
-    if rain_warning:
-        recommendation += " It might rain today, so don't forget an umbrella!"
-    if wind_speed_warning:
-        recommendation += " It's going to be windy today, so wear something that won't easily blow away."
+    # Wind speed recommendation
+    if wind_speed > 10:
+        recommendation += " Be mindful of strong winds; consider wearing something that shields you from the wind."
 
     return recommendation

@@ -1,17 +1,9 @@
-# main.py
-# Run the server with: uvicorn main:app --reload
-
 from fastapi import FastAPI, HTTPException
-from smtp_server import send_email, get_clothing_recommendations
-from location_data import LocationData
 
+from location_data import LocationData
+from smtp_server import get_clothing_recommendations, send_email
 
 app = FastAPI()
-
-# if __name__ == "__main__":
-#     import uvicorn
-
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 @app.get("/")
@@ -21,36 +13,22 @@ async def root():
 
 @app.post("/location/{city}/{state}")
 async def read_location(city: str, state: str):
-    # Create an object of LocationData
     location = LocationData(f"{city}, {state}")
-
-    # Get the coordinates of the location
-    coordinates = location.get_coordinates(city, state)
-
-    if "error" not in coordinates:
-        return {"city": city, "state": state, "coordinates": coordinates}
-    else:
-        return {"error": "Location not found"}
+    coordinates = await location.get_coordinates(city, state)
+    if "error" in coordinates:
+        raise HTTPException(status_code=404, detail="Location not found")
+    return {"city": city, "state": state, "coordinates": coordinates}
 
 
 @app.post("/weather/{city}/{state}")
 async def read_weather(city: str, state: str):
-    # Create an object of LocationData
     location = LocationData(f"{city}, {state}")
-
-    # Get the coordinates of the location
-    coordinates = location.get_coordinates(city, state)
-
+    coordinates = await location.get_coordinates(city, state)
     if "error" in coordinates:
-        return {"error": "Location not found"}
+        raise HTTPException(status_code=404, detail="Location not found")
 
-    latitude = coordinates["latitude"]
-    longitude = coordinates["longitude"]
-
-    weather_data = location.get_weather(latitude, longitude)
-
-    # Placeholder for integrating with a weather API using the latitude and longitude
-    # For now, we'll return the coordinates
+    latitude, longitude = coordinates["latitude"], coordinates["longitude"]
+    weather_data = await location.get_weather(latitude, longitude)
     return {
         "city": city,
         "state": state,
@@ -60,35 +38,7 @@ async def read_weather(city: str, state: str):
 
 
 @app.post("/send_weather_email/{city}/{state}/{email}")
-async def send_weather_email(city: str, state: str, email: str):
-    location = LocationData(f"{city}, {state}")
-    coordinates = location.get_coordinates(city, state)
-
-    if "error" in coordinates:
-        raise HTTPException(status_code=404, detail="Location not found")
-
-    latitude = coordinates["latitude"]
-    longitude = coordinates["longitude"]
-
-    hourly_weather_data = location.get_hourly_for_day(latitude, longitude)
-
-    if "error" in hourly_weather_data:
-        raise HTTPException(status_code=404, detail="Weather data not found")
-
-    recommendation = get_clothing_recommendations(hourly_weather_data)
-
-    # Compose the email body
-    subject = f"Clothing Recommendations for {city}, {state}"
-    body = f"Here are your clothing recommendations for today:\n\n{recommendation}"
-
-    # Send the email
-    send_email(email, subject, body)
-
-    return {"message": "Email sent successfully"}
-
-
-@app.post("/send_weather_average/{city}/{state}")
-async def get_daily(city: str, state: str):
+def send_weather_email(city: str, state: str, email: str):
     location = LocationData(f"{city}, {state}")
     coordinates = location.get_coordinates(city, state)
 
@@ -100,7 +50,16 @@ async def get_daily(city: str, state: str):
 
     weather_data = location.get_hourly_for_day(latitude, longitude)
 
-    if "error" in weather_data:
-        raise HTTPException(status_code=404, detail="Weather data not found")
+    # if "error" in weather_data:
+    #     raise HTTPException(status_code=404, detail="Weather data not found")
 
-    return weather_data  # Return the entire weather data
+    recommendation = get_clothing_recommendations(weather_data)
+
+    # Compose the email body
+    subject = f"Clothing Recommendations for {city}, {state}"
+    body = f"Here are your clothing recommendations for today:\n\n{recommendation}"
+
+    # Send the email
+    send_email(email, subject, body)
+
+    return {"message": "Email sent successfully"}
