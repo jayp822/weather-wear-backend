@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
 from location_data import LocationData
 from smtp_server import get_clothing_recommendations, send_email
 
@@ -86,9 +87,12 @@ def send_weather_email(city: str, state: str, email: str):
 
     recommendation = get_clothing_recommendations(weather_data)
 
+    city = city.capitalize()
+    state = state.capitalize()
+
     # Compose the email body
-    subject = f"Clothing Recommendations for {city.capitalize}, {state.capitalize}"
-    body = f"Here are your clothing recommendations for today:\n\n{recommendation}\n\n Thank You for Using Weather Wear! - Jay Patel"
+    subject = f"Clothing Recommendations for {city}, {state}"
+    body = f"Here are your clothing recommendations for today:\n\n{recommendation}\n\n Thank You for Using Weather Wear! - Jay Patel 😃"
 
     # Send the email
     send_email(email, subject, body)
